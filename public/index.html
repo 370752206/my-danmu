@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <!-- 引入依赖 -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery-danmu@2.0.0/dist/jquery.danmu.min.js"></script>
+
+    <style>
+      #danmu-container {
+        width: 100%;
+        height: 400px;
+        background: #000;
+        position: relative;
+        overflow: hidden;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- 弹幕容器 -->
+    <div id="danmu-container"></div>
+
+    <!-- 发送表单 -->
+    <input type="text" id="danmu-input" placeholder="输入弹幕" />
+    <button onclick="sendDanmu()">发送</button>
+
+    <script>
+      // 初始化弹幕
+      $("#danmu-container").danmu({
+        speed: 8000, // 滚动速度
+        fontSize: "20px",
+      });
+
+      // 连接Supabase
+      const supabase = supabase.createClient(
+        "https://wlncxbmtiewyjvplkree.supabase.com",
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndsbmN4Ym10aWV3eWp2cGxrcmVlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMxMzgzNTgsImV4cCI6MjA1ODcxNDM1OH0.0iThJ4U2n8yNsolaHmt8YY6zwbo6ZI5deCtY8Qt-wCA"
+      );
+
+      // 实时获取弹幕
+      const channel = supabase
+        .channel("danmu")
+        .on("postgres_changes", { event: "*", schema: "public" }, () => {
+          loadDanmus();
+        })
+        .subscribe();
+
+      // 加载弹幕
+      async function loadDanmus() {
+        let { data } = await supabase.from("danmu").select("*");
+        $("#danmu-container").data("danmu").danmu("addDanmu", data);
+      }
+
+      // 发送弹幕
+      async function sendDanmu() {
+        const text = $("#danmu-input").val();
+        await supabase.from("danmu").insert([{ text }]);
+        $("#danmu-input").val("");
+      }
+
+      // 初始加载
+      loadDanmus();
+    </script>
+  </body>
+</html>
